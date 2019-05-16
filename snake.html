@@ -1,0 +1,418 @@
+<html>
+<head>
+</head>
+
+<body>
+
+<div id='container' style='position:relative;'>
+<div style="display: flex;margin-bottom: 5px;">
+<div id='btn' onclick='restart()' style="border: 1px solid black; padding: 5px; border-radius: 5px; cursor: pointer;">restart</div>
+<p style="margin-left: 4em;">Score:<span id='score'>0</span></p>
+<div id='niveau' onclick='changeNiveau()' style="border: 1px solid black; padding: 5px; border-radius: 5px; cursor: pointer;margin-left: 10px;">Niveau<span id='niveauspan'>1</span></div>
+<div id='showallrecords' onclick='showAllRecords()' style="border: 1px solid black; padding: 5px; border-radius: 5px; cursor: pointer;cursor: pointer;margin-left: 10px;">Records</div>
+</div>
+<canvas height="400" width="400" id="c" style="border: 1px solid black;">
+</canvas>
+<div id='showRec' style="position: absolute; top: 0px; background: gainsboro none repeat scroll 0% 0%; width: 100%; height: 100%; display:none ;padding: 50px;">
+<div><h3>Niveau 1</h3><ul id='ul1'></ul></div>
+<div><h3>Niveau 2</h3><ul id='ul2'></ul></div>
+<div><h3>Niveau 3</h3><ul id='ul3'></ul></div>
+<div><h3>Niveau 4</h3><ul id='ul4'></ul></div>
+<div><h3>Niveau 5</h3><ul id='ul5'></ul></div>
+<div><h3>Niveau 6</h3><ul id='ul6'></ul></div>
+<input type='button' onclick='ok()' value='ok'></input>
+</div>
+<div id='saveRec' style="position: absolute; top: 0px; width: 100%; height: 100%; background: ghostwhite none repeat scroll 0% 0%; display: none;padding: 50px;">
+<div style="top: 200px; position: absolute;">
+<input id='nmtxt' type='text' placeholder='enter your name'></input>
+<input type='button' onclick='save()' value='save'></input>
+<input type='button' onclick='cancel()' value='cancel'></input>
+</div>
+</div>
+</div>
+<script type='text/javascript'>
+var w = 20;
+var stop = false;
+var score = 0
+var snk = [];
+var p = null; 
+var recordsObject = [];
+var dir = 1;
+var realDir = 1;
+var niveau = 1
+var interval = null;
+var go = false;
+snk.push({x:10,y:10});
+snk.push({x:9,y:10});
+snk.push({x:8,y:10});
+generateP();
+var canvas = document.getElementById('c');
+var cx = canvas.getContext('2d');
+for(let i = 0;i<snk.length;i++){
+	cx.fillStyle = 'green';
+	cx.fillRect(snk[i].x*w,snk[i].y*w,w,w);
+}
+
+
+function showRecords(){
+for(let i = 1; i<=6;i++){
+let e = document.getElementById('ul'+i);
+e.innerHTML = '';
+e.parentElement.style.display = 'block';
+}
+
+let liNodes = [];
+let ls = localStorage.getItem('records');
+if(ls){
+let recordsObj = [];
+ls.split('&').forEach(v => {
+let ent = v.split(':');
+recordsObj.push({name:ent[0],value:parseInt(ent[1].split(',')[0]),niveau:ent[1].split(',')[1]});
+});
+recordsObj = recordsObj.sort((v,a) => v.value < a.value); 
+recordsObject = recordsObj;
+
+
+for(let o of recordsObj){
+let text = document.createTextNode(o.name + ': ' + o.value);
+let node = document.createElement('LI');
+node.appendChild(text);
+node.niveau = o.niveau;
+liNodes.push(node);
+}
+
+if(liNodes.length > 0){
+for(let nd of liNodes){
+if(nd.niveau === '1'){
+document.getElementById('ul1').appendChild(nd);
+}else if(nd.niveau === '2'){
+document.getElementById('ul2').appendChild(nd);
+}else if(nd.niveau === '3'){
+document.getElementById('ul3').appendChild(nd);
+}else if(nd.niveau === '4'){
+document.getElementById('ul4').appendChild(nd);
+}else if(nd.niveau === '5'){
+document.getElementById('ul5').appendChild(nd);
+}else if(nd.niveau === '6'){
+document.getElementById('ul6').appendChild(nd);
+}
+}
+}
+
+for(let i = 1; i<=6;i++){
+let e = document.getElementById('ul'+i);
+sortList(e);
+}
+
+}
+
+for(let i = 1; i<=6;i++){
+let e = document.getElementById('ul'+i);
+if(e.childElementCount<1){
+e.parentElement.style.display = 'none';
+}
+}
+
+}
+
+
+showRecords();
+
+function gameOver(){
+go=true;
+document.getElementById('saveRec').style.display = 'block';
+
+
+}
+
+function f(){
+interval = setInterval(paint,90 - niveau * 10);
+}
+f();
+
+function generateP(){
+
+let tp = {x:Math.floor(Math.random()*20),y:Math.floor(Math.random()*20)};
+if(checkBody(tp)){
+return generateP();
+}else{
+p = tp;
+}
+return;
+}
+
+function checkBody(point){
+for(let i=0;i<snk.length;i++){
+if(checkColl(point,snk[i])){return true}
+}
+return false;
+}
+
+function checkColl(point,poi){
+if(point.x === poi.x && point.y === poi.y){
+	return true;
+}
+return false;
+}
+
+function movePoint(direction, point){
+if(direction===0){
+	if(point.y === 0){
+		point.y = 19;
+	}else{
+		point.y -= 1;
+	}
+	return point;
+}else if(direction === 1){
+	if(point.x === 19){
+	point.x = 0;
+	}else{
+	point.x +=1;
+	}
+	return point;
+}else if(direction === 2){
+	if(point.y === 19){
+	point.y = 0
+	}else{
+	point.y += 1;
+	}
+	return point;
+}else if(direction === 3){
+	if(point.x === 0){
+	point.x = 19;
+	}else{
+	point.x -= 1;
+	}
+	return point;
+}
+}
+
+function move(){
+let tempD=dir;
+if(tempD === 0){
+let t = movePoint(tempD,{x:snk[0].x,y:snk[0].y});
+if(checkBody(t)){
+gameOver();
+}else{
+if(checkColl(t,p)){
+updateScore();
+snk.unshift(t);
+generateP();
+realDir = tempD;
+}else{
+snk.pop();
+snk.unshift(t);
+realDir = tempD;
+}
+
+}
+}
+if(tempD === 1){
+let t = movePoint(tempD,{x:snk[0].x,y:snk[0].y});
+if(checkBody(t)){
+gameOver();
+}else{
+if(checkColl(t,p)){
+updateScore();
+snk.unshift(t);
+generateP();
+realDir = tempD;
+}else{
+snk.pop();
+snk.unshift(t);
+realDir = tempD;
+}
+
+}
+}
+if(tempD === 2){
+let t = movePoint(tempD,{x:snk[0].x,y:snk[0].y});
+if(checkBody(t)){
+gameOver();
+}else{
+if(checkColl(t,p)){
+updateScore();
+snk.unshift(t);
+generateP();
+realDir = tempD;
+}else{
+snk.pop();
+snk.unshift(t);
+realDir = tempD;
+}
+
+}
+
+}
+if(tempD === 3){
+let t = movePoint(tempD,{x:snk[0].x,y:snk[0].y});
+if(checkBody(t)){
+gameOver();
+}else{
+if(checkColl(t,p)){
+updateScore();
+snk.unshift(t);
+generateP();
+realDir = tempD;
+}else{
+snk.pop();
+snk.unshift(t);
+realDir = tempD;
+}
+
+}
+
+}
+}
+
+function pause(){
+if(stop){
+stop=false;
+}else{
+stop=true;
+}
+}
+
+function updateScore(){
+document.getElementById('score').innerText = ++score;
+}
+
+function save(){
+let st = ''
+if(recordsObject !== ''){
+for(let o of recordsObject){
+	st += o.name + ':' + o.value +','+ o.niveau + '&';
+}
+}
+
+st += document.getElementById('nmtxt').value + ':' + score +','+ niveau ;
+
+localStorage.setItem('records',st);
+
+
+
+document.getElementById('saveRec').style.display = 'none';
+document.getElementById('nmtxt').value = '';
+showRecords();
+}
+
+function cancel(){
+document.getElementById('saveRec').style.display = 'none'
+}
+
+function changeNiveau(){
+if(niveau<=5){
+niveau += 1;
+document.getElementById('niveauspan').innerText = niveau;
+restart();
+clearInterval(interval);
+f();
+}else{
+niveau = 1;
+document.getElementById('niveauspan').innerText = niveau;
+restart();
+clearInterval(interval);
+f();
+}
+}
+
+function restart(){
+snk = [];
+snk.push({x:10,y:10});
+snk.push({x:9,y:10});
+snk.push({x:8,y:10});
+dir = 1;
+realDir = 1
+document.getElementById('score').innerText = score = 0
+generateP();
+go = false;
+stop = false
+showRecords();
+}
+
+function paint(){
+if(go){
+cx.clearRect(0,0,400,400);
+for(let i = 0;i<snk.length;i++){
+	cx.fillStyle = 'rgb(0,77,0)';
+	cx.fillRect(snk[i].x*w,snk[i].y*w,w,w);
+}
+cx.fillStyle = 'rgb(77,0,0)';
+cx.fillRect(p.x*w,p.y*w,w,w);
+}else if(stop){
+cx.clearRect(0,0,400,400);
+for(let i = 0;i<snk.length;i++){
+	cx.fillStyle = 'green';
+	cx.fillRect(snk[i].x*w,snk[i].y*w,w,w);
+}
+cx.fillStyle = 'red';
+cx.fillRect(p.x*w,p.y*w,w,w);
+}else{
+move();
+cx.clearRect(0,0,400,400);
+for(let i = 0;i<snk.length;i++){
+	cx.fillStyle = 'green';
+	cx.fillRect(snk[i].x*w,snk[i].y*w,w,w);
+}
+cx.fillStyle = 'red';
+cx.fillRect(p.x*w,p.y*w,w,w);
+
+}
+}
+
+function sortList(list){
+var i ,switching, b ,shouldSwitch;
+switching = true;
+while(switching){
+switching = false;
+b = list.getElementsByTagName('LI');
+for(i=0;i<(b.lenght-1);i++){
+shouldSwitch = false;
+if(Number(b[i].niveau)>Number(b[i+1].niveau)){
+shouldSwitch = true;
+break;
+}
+}
+if(shouldSwitch){
+b[i].parentNode.inserBefore(b[i+1],b[i]);
+switching = true;
+}
+}
+}
+
+function showAllRecords(){
+pause();
+document.getElementById('showRec').style.display = 'block';
+}
+function ok(){
+document.getElementById('showRec').style.display = 'none';
+}
+
+document.addEventListener('keydown',function (e){
+if(e.key === "ArrowUp"){
+if(realDir !== 2){
+	dir=0;
+}
+}else if(e.key === "ArrowRight"){
+if(realDir !== 3){
+	dir=1;
+}
+}else if(e.key === "ArrowLeft"){
+if(realDir !== 1){
+	dir=3;
+}
+}else if(e.key ===  "ArrowDown"){
+if(realDir !== 0){
+	dir=2;
+}
+}else if(e.key === " "){
+pause();
+}
+
+});
+
+</script>
+
+
+</body>
+</html>
